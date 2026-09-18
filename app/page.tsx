@@ -61,41 +61,85 @@ export default function Home() {
   const [nextContactAtDate, setNextContactAtDate] = useState("");
   const [nextContactAtTime, setNextContactAtTime] = useState("");
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+
   useEffect(() => {
-    // Fetch Contacts
-    const qContacts = query(collection(db, "contacts"), orderBy("createdAt", "desc"));
-    const unsubscribeContacts = onSnapshot(qContacts, (snapshot) => {
-      const contactsData: Contact[] = [];
-      snapshot.forEach((doc) => {
-        contactsData.push({ id: doc.id, ...doc.data() } as Contact);
-      });
-      setContacts(contactsData);
-      
-      // If a user is viewing details, update the details object in real-time
-      setViewingDetails((prev) => {
-        if (!prev) return null;
-        const updated = contactsData.find(c => c.id === prev.id);
-        return updated || null;
+    if (isAuthenticated) {
+      // Fetch Contacts
+      const qContacts = query(collection(db, "contacts"), orderBy("createdAt", "desc"));
+      const unsubscribeContacts = onSnapshot(qContacts, (snapshot) => {
+        const contactsData: Contact[] = [];
+        snapshot.forEach((doc) => {
+          contactsData.push({ id: doc.id, ...doc.data() } as Contact);
+        });
+        setContacts(contactsData);
+        
+        // If a user is viewing details, update the details object in real-time
+        setViewingDetails((prev) => {
+          if (!prev) return null;
+          const updated = contactsData.find(c => c.id === prev.id);
+          return updated || null;
+        });
+
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching contacts:", error);
+        setLoading(false);
       });
 
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching contacts:", error);
-      setLoading(false);
-    });
+      // Fetch Events
+      const qEvents = query(collection(db, "events"));
+      const unsubscribeEvents = onSnapshot(qEvents, (snapshot) => {
+        const evData: EventData[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data(); evData.push({ docId: doc.id, id: data.id, name: data.name });
+        });
+        setEventsList(evData.sort((a, b) => Number(a.id) - Number(b.id)));
+      }, (error: Error) => console.error("Event Snapshot Error:", error));
 
-    // Fetch Events
-    const qEvents = query(collection(db, "events"));
-    const unsubscribeEvents = onSnapshot(qEvents, (snapshot) => {
-      const evData: EventData[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data(); evData.push({ docId: doc.id, id: data.id, name: data.name });
-      });
-      setEventsList(evData.sort((a, b) => Number(a.id) - Number(b.id)));
-    }, (error: Error) => console.error("Event Snapshot Error:", error));
+      return () => { unsubscribeContacts(); unsubscribeEvents(); };
+    }
+  }, [isAuthenticated]);
 
-    return () => { unsubscribeContacts(); unsubscribeEvents(); };
-  }, []);
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginEmail.toLowerCase() === "salonikanchal@gmail.com" && loginPassword === "saloni@123") {
+      setIsAuthenticated(true);
+      setLoginError("");
+    } else {
+      setLoginError("Invalid credentials.");
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white rounded-[20px] p-8 shadow-sm border border-gray-100">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Partner Login</h1>
+            <p className="text-sm text-gray-500 mt-2">Inkfetish Contacts Area</p>
+          </div>
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Email</label>
+              <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Enter your email" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Password</label>
+              <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="••••••••" />
+            </div>
+            {loginError && <p className="text-red-500 text-sm font-medium text-center">{loginError}</p>}
+            <button type="submit" className="w-full bg-black text-white px-6 py-3 rounded-xl font-medium text-sm hover:bg-gray-800 transition-colors mt-2 h-[42px]">
+              Sign In
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   const submitCallLog = async () => {
     if (!loggingCall) return;
