@@ -28,7 +28,13 @@ interface Contact {
   status: string;
   followUpCount?: number;
   history?: HistoryEntry[];
-  createdAt?: any;
+  createdAt?: { toDate?: () => Date };
+}
+
+interface EventData {
+  docId: string;
+  id: string;
+  name: string;
 }
 
 export default function Home() {
@@ -42,7 +48,7 @@ export default function Home() {
   const [filterFollowUpDate, setFilterFollowUpDate] = useState("");
   const [filterCallCount, setFilterCallCount] = useState("any");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [eventsList, setEventsList] = useState<{docId: string, id: string, name: string}[]>([]);
+  const [eventsList, setEventsList] = useState<EventData[]>([]);
   
   // Modals State
   const [loggingCall, setLoggingCall] = useState<Contact | null>(null);
@@ -81,9 +87,9 @@ export default function Home() {
     // Fetch Events
     const qEvents = query(collection(db, "events"), orderBy("createdAt", "desc"));
     const unsubscribeEvents = onSnapshot(qEvents, (snapshot) => {
-      const evData: any[] = [];
+      const evData: EventData[] = [];
       snapshot.forEach((doc) => {
-        evData.push({ docId: doc.id, ...doc.data() });
+        const data = doc.data(); evData.push({ docId: doc.id, id: data.id, name: data.name });
       });
       setEventsList(evData);
     });
@@ -102,7 +108,7 @@ export default function Home() {
         note: callNote
       };
 
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         status: callOutcome,
         followUpCount: currentCount + 1,
         history: arrayUnion(historyEntry)

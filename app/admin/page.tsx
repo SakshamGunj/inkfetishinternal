@@ -21,20 +21,27 @@ interface Contact {
   note: string;
   event: string;
   tag: string;
-  contactByDate: string;
+  contactByDate?: string; // Legacy
+  contactByTime?: string; // Legacy
+  contactBeforeDate?: string;
+  contactAtDate?: string;
+  contactAtTime?: string;
   status: string;
   followUpCount?: number;
   history?: HistoryEntry[];
-  createdAt?: any;
+  createdAt?: { toDate?: () => Date };
+}
+
+interface EventData {
+  docId: string;
+  id: string;
+  name: string;
 }
 
 export default function AdminPage() {
-  const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  const [activeTab, setActiveTab] = useState<"csv" | "manual" | "reports">("csv");
-  
-  // CSV State
+  const [password, setPassword] = useState("");
+  const [activeTab, setActiveTab] = useState<"csv" | "manual" | "reports" | "events">("reports");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -51,7 +58,7 @@ export default function AdminPage() {
   const [viewingDetails, setViewingDetails] = useState<Contact | null>(null);
   
   // Events State
-  const [eventsList, setEventsList] = useState<{docId: string, id: string, name: string}[]>([]);
+  const [eventsList, setEventsList] = useState<EventData[]>([]);
   const [newEventId, setNewEventId] = useState("");
   const [newEventName, setNewEventName] = useState("");
 
@@ -66,16 +73,16 @@ export default function AdminPage() {
       // Fetch Events
       const qEvents = query(collection(db, "events"), orderBy("createdAt", "desc"));
       const unsubscribeEvents = onSnapshot(qEvents, (snapshot) => {
-        const evData: any[] = [];
+        const evData: EventData[] = [];
         snapshot.forEach((doc) => {
-          evData.push({ docId: doc.id, ...doc.data() });
+          const data = doc.data();
+          evData.push({ docId: doc.id, id: data.id, name: data.name });
         });
         setEventsList(evData);
       });
 
       // Fetch Reports if tab active
       if (activeTab === "reports") {
-        setLoadingReports(true);
         const qContacts = query(collection(db, "contacts"), orderBy("createdAt", "desc"));
         const unsubscribeContacts = onSnapshot(qContacts, (snapshot) => {
           const contactsData: Contact[] = [];
@@ -118,7 +125,7 @@ export default function AdminPage() {
       skipEmptyLines: true,
       complete: async (results) => {
         try {
-          const parsedContacts = results.data as any[];
+          const parsedContacts = results.data as Record<string, string>[];
           let count = 0;
           let skipped = 0;
           for (const contact of parsedContacts) {
@@ -790,7 +797,7 @@ export default function AdminPage() {
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-2">Complete Call Log</h4>
               <div className="flex flex-col gap-3 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">
                 {(!viewingDetails.history || viewingDetails.history.length === 0) ? (
-                  <div className="text-center py-6 text-sm text-gray-400 italic">The team hasn't called this lead yet.</div>
+                  <div className="text-center py-6 text-sm text-gray-400 italic">The team hasn&apos;t called this lead yet.</div>
                 ) : (
                   viewingDetails.history.map((h, i) => {
                     const dateObj = new Date(h.date);
