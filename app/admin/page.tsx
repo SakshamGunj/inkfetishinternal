@@ -71,15 +71,15 @@ export default function AdminPage() {
   useEffect(() => {
     if (isAuthenticated) {
       // Fetch Events
-      const qEvents = query(collection(db, "events"), orderBy("createdAt", "desc"));
+      const qEvents = query(collection(db, "events"));
       const unsubscribeEvents = onSnapshot(qEvents, (snapshot) => {
         const evData: EventData[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
           evData.push({ docId: doc.id, id: data.id, name: data.name });
         });
-        setEventsList(evData);
-      });
+        setEventsList(evData.sort((a, b) => Number(a.id) - Number(b.id)));
+      }, (error) => console.error("Event Snapshot Error:", error));
 
       // Fetch Reports if tab active
       if (activeTab === "reports") {
@@ -187,7 +187,7 @@ export default function AdminPage() {
         followUpCount: 0,
         history: [],
         createdAt: serverTimestamp(),
-      });
+      }, (error) => console.error("Event Snapshot Error:", error));
       setMessage({ text: `Successfully added ${manualForm.name}.`, type: "success" });
       setManualForm({ name: "", email: "", phone: "", whatsapp: "", note: "", event: "", tag: "", contactBeforeDate: "", contactAtDate: "", contactAtTime: "" });
     } catch (error) {
@@ -206,7 +206,7 @@ export default function AdminPage() {
         id: newEventId,
         name: newEventName,
         createdAt: serverTimestamp()
-      });
+      }, (error) => console.error("Event Snapshot Error:", error));
       setNewEventId("");
       setNewEventName("");
       setMessage({ text: "Event created successfully.", type: "success" });
@@ -321,7 +321,7 @@ export default function AdminPage() {
         if (h.date && h.date.startsWith(todayStr)) {
           callsToday++;
         }
-      });
+      }, (error) => console.error("Event Snapshot Error:", error));
     }
   });
 
