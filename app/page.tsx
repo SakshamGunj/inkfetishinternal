@@ -82,7 +82,7 @@ export default function Home() {
     }, (error) => {
       console.error("Error fetching contacts:", error);
       setLoading(false);
-    }, (error) => console.error("Event Snapshot Error:", error));
+    });
 
     // Fetch Events
     const qEvents = query(collection(db, "events"));
@@ -92,7 +92,7 @@ export default function Home() {
         const data = doc.data(); evData.push({ docId: doc.id, id: data.id, name: data.name });
       });
       setEventsList(evData.sort((a, b) => Number(a.id) - Number(b.id)));
-    }, (error) => console.error("Event Snapshot Error:", error));
+    }, (error: Error) => console.error("Event Snapshot Error:", error));
 
     return () => { unsubscribeContacts(); unsubscribeEvents(); };
   }, []);
